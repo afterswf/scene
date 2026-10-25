@@ -1,4 +1,16 @@
 # AwayJS Scene
+
+This is [Mesmotronic](https://mesmotronic.com)'s fork of [awayjs/scene](https://github.com/awayjs/scene) for
+[AfterSWF](https://github.com/afterswf/embed), published as [`@afterswf/scene`](https://www.npmjs.com/package/@afterswf/scene).
+Its fixes are listed in [AfterSWF's README](https://github.com/afterswf/embed#more-advanced-as3-content).
+
+It keeps the original package names in its imports, so install it, and any other afterswf packages you use, under
+their original names with npm aliases:
+
+```sh
+npm install @awayjs/scene@npm:@afterswf/scene
+```
+
 [![Build Status](https://travis-ci.org/awayjs/scene.svg?branch=dev)](https://travis-ci.org/awayjs/scene)
 
 Dependency for AwayJS applications requiring a heirarchical scenegraph: contains data structures for a collection of display object types, as well as geometric prefabs for simple 2D & 3D objects.
