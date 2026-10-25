@@ -2,16 +2,30 @@ import { TextField } from '../display/TextField';
 import { TextFormat } from './TextFormat';
 import { parse } from 'node-html-parser';
 
-const MNEMOS = [
-	/*{
-		test: /\&apos;/g,
-		replace: '\''
-	},*/
-	{
-		test: /\&gt;/g,
-		replace: '\>'
-	}
-];
+// the entities Flash Player supports in htmlText, plus character codes such as &#38; and &#x20AC;
+const ENTITIES = {
+	lt: '<',
+	gt: '>',
+	amp: '&',
+	quot: '"',
+	apos: '\''
+};
+
+/**
+ * Decodes a text node's entities in a single pass, so each is decoded once:
+ * "&amp;lt;" becomes "&lt;", and a bare "&" is left as it is
+ */
+function decodeEntities(text: string): string {
+	return text.replace(/&(#[xX][0-9a-fA-F]+|#[0-9]+|lt|gt|amp|quot|apos);/g, (match: string, entity: string) => {
+		if (entity[0] !== '#') {
+			return ENTITIES[entity];
+		}
+		const code = entity[1] === 'x' || entity[1] === 'X'
+			? parseInt(entity.substring(2), 16)
+			: parseInt(entity.substring(1), 10);
+		return code > 0 && code <= 0x10FFFF ? String.fromCodePoint(code) : match;
+	});
+}
 export class HTMLTextProcessor {
 	private static instance: HTMLTextProcessor;
 	public static get() {
@@ -30,7 +44,6 @@ export class HTMLTextProcessor {
 
 		//input = input.replace(new RegExp('&gt;', 'g'), ' ');
 		input = input.replace(/&quot;/g, '\"');
-		input = input.replace(/&amp;/g, '\&');
 		input = input.replace(/&apos;/g, '\'');
 		input = input.replace(new RegExp('&nbsp;', 'g'), ' ');
 		input = input.replace(new RegExp('â', 'g'), String.fromCharCode(8730));
@@ -51,8 +64,6 @@ export class HTMLTextProcessor {
 		input = input.replace(new RegExp('</LI>', 'g'), '</li>');
 		input = input.replace(new RegExp('<FONT', 'g'), '<font');
 		input = input.replace(new RegExp('</FONT>', 'g'), '</font>');
-
-		input = input.replace(new RegExp('& ', 'g'), '&amp; ');
 
 		// some preprocessing to make sure that html-tags are closing
 		// to some degree FP seem to auto-close tags, so we need to do the same
@@ -401,13 +412,10 @@ export class HTMLTextProcessor {
 		} else {
 			// this is a content node - add the text to output
 			// if a nodes content contains only line-breaks or whitespace, FP seem to ignore it
-			const testContent: string = (<any>myChild).text.replace(/[\s\r\n]/gi, '');
+			// rawText, as whether text decodes entities depends on the node-html-parser version
+			const newText: string = decodeEntities((<any>myChild).rawText);
+			const testContent: string = newText.replace(/[\s\r\n]/gi, '');
 			if (testContent != '') {
-
-				let newText = (<any>myChild).text;
-				for (const m of MNEMOS) {
-					newText = newText.replace(m.test, m.replace);
-				}
 				textProps.text += newText;
 			}
 		}
