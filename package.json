@@ -9,7 +9,7 @@
   "author": "Rob Bateman",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/awayjs/scene.git"
+    "url": "git+https://github.com/afterswf/scene.git"
   },
   "scripts": {
     "rimraf": "rimraf",
@@ -26,6 +26,7 @@
     "prebuild": "npm run clean:dist",
     "build": "npm run tsc:build && npm run rollup",
     "prepare": "npm run tsc:build",
+    "prepublishOnly": "npm run build",
     "copyVersionToIndex": "node ./copyVersionToIndex && git add ./index.ts && git commit -m \"update version number in index.ts\"",
     "version": "npm run copyVersionToIndex && npm run build"
   },
@@ -38,9 +39,9 @@
   ],
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/awayjs/scene/issues"
+    "url": "https://github.com/afterswf/scene/issues"
   },
-  "homepage": "https://github.com/awayjs/scene#readme",
+  "homepage": "https://github.com/afterswf/scene#readme",
   "peerDependencies": {
     "@awayjs/core": "^0.9.0",
     "@awayjs/graphics": "^0.5.0",
@@ -70,5 +71,8 @@
     "rollup": "^2.79.1",
     "tslib": "^2.3.0",
     "typescript": "^4.9.5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
