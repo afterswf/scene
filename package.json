@@ -1,5 +1,5 @@
 {
-  "name": "@awayjs/scene",
+  "name": "@afterswf/scene",
   "version": "0.13.325",
   "description": "AwayJS scene classes",
   "main": "bundle/awayjs-scene.umd.js",
