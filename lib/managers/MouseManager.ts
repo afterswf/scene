@@ -54,7 +54,7 @@ export class MouseManager {
 		mousedown: new AwayMouseEvent(AwayMouseEvent.MOUSE_DOWN),
 		mousemove: new AwayMouseEvent(AwayMouseEvent.MOUSE_MOVE),
 		mouseover: new AwayMouseEvent(AwayMouseEvent.MOUSE_OVER),
-		mousewheel: new AwayMouseEvent(AwayMouseEvent.MOUSE_WHEEL),
+		wheel: new AwayMouseEvent(AwayMouseEvent.MOUSE_WHEEL),
 		dblclick: new AwayMouseEvent(AwayMouseEvent.DOUBLE_CLICK),
 		rollover: new AwayMouseEvent(AwayMouseEvent.ROLL_OVER),
 		rollout: new AwayMouseEvent(AwayMouseEvent.ROLL_OUT),
@@ -148,7 +148,7 @@ export class MouseManager {
 		window.addEventListener('mouseup', this.onMouseUp);
 
 		container.addEventListener('touchend', this.onMouseUp);
-		container.addEventListener('mousewheel', this.onMouseWheel);
+		container.addEventListener('wheel', this.onMouseWheel);
 		container.addEventListener('mouseover', this.onMouseOver);
 		container.addEventListener('mouseout', this.onMouseOut);
 
@@ -407,6 +407,17 @@ export class MouseManager {
 
 				if (pointerData.dragCollision)
 					this.setupAndDispatchEvent(this._dragMove, pointerData, pointerData.dragCollision);
+
+			} else if (event.type == pointerData.wheel?.type) {
+
+				// as with mouse moves, the stage gets it too, which AVM1's Mouse.onMouseWheel needs
+				if (!this._eventBubbling)
+					this._stage.dispatchEvent(event);
+
+				if (dispatcher)
+					this.dispatchEvent(event, dispatcher);
+				else if (this._eventBubbling)
+					this._stage.dispatchEvent(event);
 
 			} else {
 				// MouseEvent.MOUSE_OVER / MouseEvent.MOUSE_OUT / MouseEvent.DRAG_OVER / MouseEvent.DRAG_OUT
@@ -710,10 +721,33 @@ export class MouseManager {
 		return event;
 	}
 
+	/**
+	 * As in Flash, the whole number of lines to scroll (3 a notch), positive when scrolling up.
+	 * Browsers report wheels differently, so wheelDelta (120 a notch) is used where there is one.
+	 */
+	private static wheelDelta(event: WheelEvent): number {
+		let lines: number;
+
+		if ((<any> event).wheelDelta) {
+			lines = (<any> event).wheelDelta / 40;
+		} else if (event.deltaMode == WheelEvent.DOM_DELTA_LINE) {
+			lines = -event.deltaY;
+		} else if (event.deltaMode == WheelEvent.DOM_DELTA_PAGE) {
+			lines = -3 * event.deltaY;
+		} else {
+			lines = -3 * event.deltaY / 100;
+		}
+
+		// trackpads send lots of small deltas, which shouldn't round to nothing
+		return lines > 0 ? Math.max(1, Math.round(lines)) : lines < 0 ? Math.min(-1, Math.round(lines)) : 0;
+	}
+
 	private queueDispatch(pointerData: PointerData, event: PointerEvent, sourceEvent: MouseEvent | TouchEvent | WheelEvent): void {
 		// Store event to be dispatched later.
 		if (event instanceof AwayMouseEvent) {
-			event.delta = (sourceEvent instanceof WheelEvent) ? -3 * sourceEvent.deltaY / 100 : 0;
+			const delta = (sourceEvent instanceof WheelEvent) ? MouseManager.wheelDelta(sourceEvent) : 0;
+			// wheel events in the same frame add up, rather than the last replacing the others
+			event.delta = (delta && pointerData.queuedEvents.indexOf(event) != -1) ? event.delta + delta : delta;
 			event.buttons = (sourceEvent instanceof MouseEvent) ? <MouseButtons> sourceEvent.buttons : MouseButtons.NO_BUTTON;
 		}
 		event.ctrlKey = sourceEvent.ctrlKey;
@@ -943,7 +977,7 @@ class PointerData {
 			this.down = MouseManager._pointerDict.mousedown;
 			this.move = MouseManager._pointerDict.mousemove;
 			this.over = MouseManager._pointerDict.mouseover;
-			this.wheel = MouseManager._pointerDict.mousewheel;
+			this.wheel = MouseManager._pointerDict.wheel;
 			this.doubleClick = MouseManager._pointerDict.dblclick;
 			this.rollOver = MouseManager._pointerDict.rollover;
 			this.rollOut = MouseManager._pointerDict.rollout;
