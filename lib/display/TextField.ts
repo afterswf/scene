@@ -412,7 +412,13 @@ export class TextField extends DisplayObjectContainer {
 		// } else {
 		// 	this.setSelection(0, 0);
 		// }
-		this.setSelection(0, 0);
+
+		// as in Flash, focusing a field with the keyboard (e.g. Tab) selects its text,
+		// while clicking it places the caret
+		if (value && !fromMouseDown)
+			this.setSelection(0, this._iText.length);
+		else
+			this.setSelection(0, 0);
 
 		this._glyphsDirty = true;
 

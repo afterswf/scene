@@ -1,7 +1,7 @@
 import { Vector3D } from '@awayjs/core';
 import { Stage } from '@awayjs/stage';
 
-import { PickingCollision, RaycastPicker, INode } from '@awayjs/view';
+import { PickingCollision, PickGroup, RaycastPicker, INode } from '@awayjs/view';
 import { FocusEvent } from '../events/FocusEvent';
 
 import { KeyboardEvent } from '../events/KeyboardEvent';
@@ -28,6 +28,7 @@ export class MouseManager {
 	private _updateDirty: boolean;
 
 	private _focusNode: INode;       // entity currently in focus
+	private _rootNode: INode;        // root of the picked display list, for tabbing
 
 	public allowKeyInput: boolean=true;
 
@@ -216,7 +217,7 @@ export class MouseManager {
 
 	}
 
-	public setFocus(node: INode) {
+	public setFocus(node: INode, fromMouseDown: boolean = true) {
 		if (this._focusNode == node)
 			return;
 
@@ -232,7 +233,7 @@ export class MouseManager {
 
 			if (this._focusNode) {
 				this.dispatchEvent(this._focusIn, this._focusNode);
-				this._focusNode.container.setFocus(true, true);
+				this._focusNode.container.setFocus(true, fromMouseDown);
 			}
 		}
 	}
@@ -284,6 +285,9 @@ export class MouseManager {
 	}
 
 	public fireMouseEvents(forcePicker: RaycastPicker = null): void {
+		if (forcePicker)
+			this._rootNode = forcePicker.node;
+
 		//if theres nothing to update, return
 		if (!forcePicker && !this._updateDirty)
 			return;
@@ -759,8 +763,35 @@ export class MouseManager {
 				if (this._stage)
 					this._stage.dispatchEvent(newEvent);
 			}
+
+			// as in Flash, Tab moves focus between the player's objects rather than out of it
+			if (event.keyCode == 9) {
+				event.preventDefault();
+				this.moveFocus(event.shiftKey);
+			}
 		}
 
+	}
+
+	/**
+	 * Moves focus to the next tab-enabled object, or the previous one, as Tab and
+	 * Shift+Tab do in Flash
+	 */
+	public moveFocus(backwards: boolean = false): void {
+		if (!this._rootNode)
+			return;
+
+		const tabPicker = PickGroup.getInstance().getTabPicker(this._rootNode);
+
+		// the display list may have changed since the last tab
+		tabPicker.traverse();
+
+		const node: INode = backwards
+			? tabPicker.getPrevTabEntity(this._focusNode)
+			: tabPicker.getNextTabEntity(this._focusNode);
+
+		if (node && node != this._focusNode)
+			this.setFocus(node, false);
 	}
 
 	public onKeyUp(event): void {
